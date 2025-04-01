@@ -1,91 +1,179 @@
 import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Text, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { AlphabeticalIndex } from '@/components/AlphabeticalIndex';
+import { CategorySection } from '@/components/CategorySection';
+import { ContactListItem } from '@/components/ContactListItem';
+import { Ionicons } from '@expo/vector-icons';
+import { useContacts } from '@/context/ContactContext';
 import { useRouter } from 'expo-router';
-import { ContactCard } from '../components/ContactCard';
-import { ContactForm } from '../components/ContactForm';
-import { useContacts } from '../context/ContactContext';
-import { Contact } from '../types/contact';
 
 export default function HomeScreen() {
+  const { contacts, deleteContact } = useContacts();
   const router = useRouter();
-  const { contacts, deleteContact, addContact } = useContacts();
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
-  const handleAddContact = (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => {
-    addContact(contact);
-    setShowAddForm(false);
+  const handleLetterPress = (letter: string) => {
+    // Implement scrolling to section
   };
 
-  const handleEditContact = (contact: Contact) => {
+  const handleAddContact = () => {
+    router.push('/new-contact');
+  };
+
+  const handleEditContact = (contactId: string) => {
     router.push({
-      pathname: "/(tabs)/explore",
-      params: { id: contact.id }
+      pathname: '/edit-contact',
+      params: { id: contactId }
     });
   };
 
-  const handleDeleteContact = (id: string) => {
-    deleteContact(id);
+  const handleDeleteContact = (contactId: string) => {
+    Alert.alert(
+      'Delete Contact',
+      'Are you sure you want to delete this contact?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteContact(contactId);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
-  const filteredContacts = contacts.filter(contact => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      contact.name.toLowerCase().includes(searchLower) ||
-      contact.phone.includes(searchLower) ||
-      contact.email.toLowerCase().includes(searchLower) ||
-      (contact.address && contact.address.toLowerCase().includes(searchLower))
+  const handleToggleSelection = (contactId: string) => {
+    setSelectedContacts(prev => {
+      if (prev.includes(contactId)) {
+        return prev.filter(id => id !== contactId);
+      } else {
+        return [...prev, contactId];
+      }
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedContacts.length === 0) return;
+
+    Alert.alert(
+      'Delete Selected Contacts',
+      `Are you sure you want to delete ${selectedContacts.length} contact${selectedContacts.length > 1 ? 's' : ''}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            selectedContacts.forEach(id => deleteContact(id));
+            setSelectedContacts([]);
+            setSelectionMode(false);
+          },
+        },
+      ],
+      { cancelable: true }
     );
-  });
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedContacts([]);
+  };
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Contacts</Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowAddForm(true)}
-        >
-          <Text style={styles.addButtonText}>Add Contact</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search contacts..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {showAddForm ? (
-        <ContactForm
-          onSubmit={handleAddContact}
-          onCancel={() => setShowAddForm(false)}
-        />
-      ) : (
-        <FlatList
-          data={filteredContacts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ContactCard
-              contact={item}
-              onDelete={() => handleDeleteContact(item.id)}
-              onEdit={() => handleEditContact(item)}
-            />
+        <ThemedText style={styles.title}>Contacts</ThemedText>
+        <View style={styles.headerButtons}>
+          {selectionMode ? (
+            <>
+              {selectedContacts.length > 0 && (
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDeleteSelected}
+                >
+                  <Ionicons name="trash-outline" size={24} color="white" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={toggleSelectionMode}
+              >
+                <Ionicons name="close" size={24} color="#9BA1A6" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={toggleSelectionMode}
+            >
+              <Ionicons name="checkmark" size={24} color="#9BA1A6" />
+            </TouchableOpacity>
           )}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {searchQuery ? 'No contacts found' : 'No contacts yet'}
-              </Text>
-            </View>
-          }
+          <TouchableOpacity style={styles.headerButton}>
+            <Ionicons name="search" size={24} color="#9BA1A6" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Categories */}
+        <CategorySection
+          title="Profile"
+          icon="person"
+          color="#4F46E5"
+          onPress={() => {}}
         />
-      )}
-    </View>
+        <CategorySection
+          title="Groups"
+          icon="people"
+          color="#06B6D4"
+          onPress={() => {}}
+        />
+        <CategorySection
+          title="Favorites"
+          icon="star"
+          color="#F59E0B"
+          onPress={() => {}}
+        />
+
+        {/* Contacts List */}
+        {contacts.map((contact) => (
+          <ContactListItem
+            key={contact.id}
+            contact={contact}
+            selectionMode={selectionMode}
+            isSelected={selectedContacts.includes(contact.id)}
+            onSelect={() => handleToggleSelection(contact.id)}
+            onDelete={() => handleDeleteContact(contact.id)}
+            onEdit={() => handleEditContact(contact.id)}
+          />
+        ))}
+      </ScrollView>
+
+      {/* Alphabetical Index */}
+      <AlphabeticalIndex onLetterPress={handleLetterPress} />
+
+      {/* FAB - Always visible */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={handleAddContact}
+      >
+        <Ionicons name="add" size={24} color="white" />
+      </TouchableOpacity>
+    </ThemedView>
   );
 }
 
@@ -106,42 +194,36 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#ECEDEE',
   },
-  addButton: {
-    backgroundColor: '#8B5CF6',
-    padding: 10,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  searchContainer: {
-    padding: 16,
-    backgroundColor: '#1F2937',
-    borderBottomWidth: 1,
-    borderBottomColor: '#374151',
-  },
-  searchInput: {
-    backgroundColor: '#374151',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 15,
-    color: '#ECEDEE',
-  },
-  list: {
-    paddingVertical: 8,
-  },
-  emptyContainer: {
-    flex: 1,
+  headerButtons: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
   },
-  emptyText: {
-    fontSize: 15,
-    color: '#9BA1A6',
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444',
+  },
+  content: {
+    flex: 1,
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    zIndex: 2,
   },
 }); 

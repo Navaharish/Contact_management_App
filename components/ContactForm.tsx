@@ -16,17 +16,17 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, initialData,
 
   useEffect(() => {
     if (initialData) {
-      setName(initialData.name);
-      setPhone(initialData.phone);
-      setEmail(initialData.email);
-      setAddress(initialData.address || '');
+      setName(initialData.name ?? '');
+      setPhone(initialData.phoneNumber ?? '');
+      setEmail(initialData.email ?? '');
+      setAddress(initialData.address ?? '');
     }
   }, [initialData]);
 
   const handleSubmit = () => {
     onSubmit({
       name,
-      phone,
+      phoneNumber: phone,
       email,
       address,
     });
